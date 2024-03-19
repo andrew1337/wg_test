@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Rock Paper Scissors</title>
+</head>
+<body>
+    <h1>Rock Paper Scissors</h1>
+
+    <div id="login-page">
+        <h2>Enter your username:</h2>
+        <input type="text" id="username-input">
+        <button onclick="goToQueue()">Start</button>
+    </div>
+
+    <div id="queue-page" hidden>
+        <h2>Waiting for opponent...</h2>
+    </div>
+    <div id="game-page" hidden>
+        <h2>Game Started!</h2>
+        <h3>
+            <p id="games-won"></p>
+            <p id="games-played"></p>
+        </h3>
+        <p id="countdown">...</p>
+        <button class="controls" id="rock-button" disabled>Rock 🪨</button>
+        <button class="controls" id="paper-button" disabled>Paper 📃</button>
+        <button class="controls" id="scissors-button" disabled>Scissors ✂️</button>
+        <br>
+        <ul id="opponents">
+            
+        </ul>
+        <button onclick="window.location.reload()">Start new game 🆕</button>
+        <p id="result"></p>
+        <div id="post-result-controls" hidden>
+            <button onclick="window.location.reload()">Start new game 🆕</button>
+        </div>
+    </div>
+
+    <script>
+        const usernameInput = document.getElementById("username-input");
+        const loginPage = document.getElementById("login-page");
+        const queuePage = document.getElementById("queue-page");
+        const gamePage = document.getElementById("game-page");
+        const countdownElement = document.getElementById("countdown");
+        const resultElement = document.getElementById("result");
+        const postResultControls = document.getElementById("post-result-controls");
+        const rockButton = document.getElementById("rock-button");
+        const paperButton = document.getElementById("paper-button");
+        const scissorsButton = document.getElementById("scissors-button");
+        const controls = [rockButton, paperButton, scissorsButton];
+        const gamesWon = document.getElementById("games-won");
+        const gamesPlayed = document.getElementById("games-played");
+        const opponentsElement = document.getElementById("opponents");
+
+        let ws;
+        const url = new URL(window.location.href);
+        const urlParams = new URLSearchParams(url.search);
+        let playerNameFromUrl = urlParams.get('username'); 
+        usernameInput.value = playerNameFromUrl;
+
+        usernameInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                goToQueue();
+            }
+        });
+
+        function goToQueue() {
+            if (!usernameInput.value) {
+                alert("Please enter a username.");
+                return;
+            }
+            playerName = usernameInput.value;
+            history.replaceState({}, "", `?username=${playerName}`);
+            loginPage.hidden = true;
+            queuePage.hidden = false;
+            gamePage.hidden = true;
+            postResultControls.hidden = true;
+            connectToWebSocket();
+        }
+
+        function connectToWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws/${playerName}`);
+
+            ws.onopen = () => {
+                console.log("Connected to WebSocket server");
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                switch (data?.game_state) {
+                    case "start":
+                        handleGameStart(data.players);
+                        break;
+                    case "stop":
+                        handleGameStop(data.stop);
+                        break;
+                    case "result":
+                        switch (data.result) {
+                            case "WIN":
+                                resultElement.textContent = "You win! 🏆";
+                                break;
+                            case "LOSE":
+                                resultElement.textContent = "You lose! 😥";
+                                break;
+                            case "DRAW":
+                                resultElement.textContent = "It's a draw! 🤷‍♀️";
+                                if (data.restart_seconds_remaining){
+                                    resultElement.textContent = "It's a draw! Restarting in " + data.restart_seconds_remaining + " seconds...";
+                                    break;
+                                }
+                                break;
+                        }
+                        break;
+                    case "end":
+                        handleGameEnd();
+                        break;
+                    case "score":
+                        gamesPlayed.innerText = "Rounds played: " + data.score.games;
+                        gamesWon.innerText  = "Rounds won: " + data.score.wins;
+                        break;
+                    case "countdown":
+                        updateCountdown(data.countdown);
+                        break;
+                }
+            };
+        };
+
+        function handleGameStart(opponents) {
+            queuePage.hidden = true;
+            gamePage.hidden = false;
+            enableButtons();
+            resultElement.textContent = "";
+
+            while (opponentsElement.firstChild) {
+                opponentsElement.removeChild(opponentsElement.firstChild);
+            }
+            opponents.forEach(opponent => {
+                if (opponent === playerName) {
+                    return;
+                }
+                const li = document.createElement("li");
+                li.textContent = opponent;
+                opponentsElement.appendChild(li);
+                const blockUserBtn = document.createElement("button");
+                blockUserBtn.id = opponent;
+                blockUserBtn.textContent = "Block this guy";
+                li.appendChild(blockUserBtn);
+                blockUserBtn.addEventListener("click", (event) => {
+                    oponentNameByEvent = event.target.id;
+                    ws.send(JSON.stringify({'block': oponentNameByEvent}));
+                    event.target.disabled = true;
+                });
+            });
+        }
+        function handleGameStop(stop) {
+            resultElement.textContent = stop;
+        }
+        function handleGameEnd(result) {
+            // todo: restart page 
+        }
+
+        function updateCountdown(countdown) {
+            countdownElement.textContent = `Seconds remaining: ${countdown}`;
+        }
+
+        function enableButtons() {
+            controls.forEach(button => button.disabled = false);
+        }
+
+        function disableButtons() {
+            controls.forEach(button => button.disabled = true);
+        }
+
+        rockButton.addEventListener("click", () => {
+            ws.send(JSON.stringify({'choice': "r"})); 
+            disableButtons();
+        });
+        paperButton.addEventListener("click", () =>{ 
+            ws.send(JSON.stringify({'choice': "p"})); 
+            disableButtons();
+        });
+        scissorsButton.addEventListener("click", () => {
+            ws.send(JSON.stringify({'choice': "s"})); 
+            disableButtons();
+        });
+    </script>
+</body>
+</html>
