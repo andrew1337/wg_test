@@ -31,22 +31,15 @@ class Game:
     def __init__(self, players: List[str]):
         if len(players) < 2:
             raise ValueError("Game needs at least 2 players")
-        self.players = players
+        self.players = set(players)
         self.disconnected: Set[str] = set()
         self.choices: dict[str, Move] = {}
         self.result: ResultTable = ResultTable(winners=set(), losers=set())
 
-    def is_all_players_made_a_move(self) -> bool:
-        return len(self.choices) == len(self.players)
+    def is_all_connected_players_are_made_a_move(self) -> bool:
+        return len(self.choices) == len(self.players) - len(self.disconnected)
 
-    @property
-    def the_latest_player(self) -> Optional[str]:
-        # return diff of all players and disconnected
-        result = set(self.players) - self.disconnected
-        assert len(result) == 1
-        return list(result)[0]
-
-    def handle_choice(self, player: str, choice: Move) -> Optional[Move]:
+    def do_move(self, player: str, choice: Move) -> Optional[Move]:
         if choice not in Move.__members__.values():
             raise ValueError("Invalid choice. Choose R, P, or S.")
         if player in self.choices:
@@ -59,7 +52,7 @@ class Game:
 
     def determine_winners(self) -> GameResult:
         lucky_move = self._calculate_lucky_move(list(self.choices.values()))
-        if not lucky_move:
+        if not lucky_move and len(self.choices) == len(self.players):
             return GameResult.TIE
         winners = [
             player
@@ -67,7 +60,7 @@ class Game:
             if choice == lucky_move and player not in self.disconnected
         ]
         self.result.winners.update(winners)
-        self.result.losers.update(set(self.players) - set(winners))
+        self.result.losers.update(self.players - set(winners))
         return GameResult.WIN
 
     @staticmethod
