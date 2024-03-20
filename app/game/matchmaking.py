@@ -60,12 +60,16 @@ class ConnectionManager:
                 await asyncio.sleep(1)
                 continue
             game_room = GameRoom(self.room_capacity, scoreboard=self.users_scoreboard)
-            await asyncio.gather(
-                *(
-                    self._add_user_to_room(player_name, game_room)
-                    for player_name in match
+            try:
+                await asyncio.gather(
+                    *(
+                        self._add_user_to_room(player_name, game_room)
+                        for player_name in match
+                    )
                 )
-            )
+            except Exception as e:
+                print(e)
+                await asyncio.sleep(1)
 
     async def keep_connections_active(self, song):
         while True:
