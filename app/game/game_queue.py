@@ -36,7 +36,7 @@ class MatchmakingQueue:
             print(f"waiting for {n} players")
             item = await self.queue.get()
             if randint(0, 2):
-                self.add(item)
+                await self.add(item)
                 continue
             if len(match) == 0:
                 match.append(item)
