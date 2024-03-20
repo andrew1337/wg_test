@@ -37,13 +37,13 @@ docker-compose up
 
 ✅ Players must make their choice before the timer runs out;
 
-❔ After players make their choice, the round is announced: 
+✅ After players make their choice, the round is announced: 
 
-	❌ In case of a draw, the round is played again;
+	✅ In case of a draw, the round is played again;
 	
 	✅ If one of the players did not make a choice within the allotted time, he is considered a loser;
 	
-	❔ If both players do not have time to make a choice, their gaming sessions end (they start the game again);
+	✅ If both players do not have time to make a choice, their gaming sessions end (they start the game again);
 	
 	✅ If one player wins, the player counters are updated.
 
