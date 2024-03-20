@@ -16,6 +16,7 @@ class UserAreadyInRoom(Exception):
 
 @dataclass
 class UserInfo:
+    username: str
     ws: WebSocket
     room: GameRoom
 
@@ -30,7 +31,9 @@ class ConnectionManager:
         self.users_scoreboard = scoreboard
 
     async def connect(self, websocket: WebSocket, player_name: str):
-        self.users[player_name] = UserInfo(ws=websocket, room=None)
+        self.users[player_name] = UserInfo(
+            ws=websocket, room=None, username=player_name
+        )
         await websocket.accept()
         await self.q.add(player_name)
 
@@ -46,16 +49,14 @@ class ConnectionManager:
     async def _add_user_to_room(self, player_name, room: GameRoom):
         current_user = self.users[player_name]
         if current_user.room:
-            raise UserAreadyInRoom(f"{player_name=} is already in game")
+            current_user.room.user_interactions.handle_disconnection(current_user.ws)
         current_user.room = room
         await room.add_player(player_name, current_user.ws)
 
     async def handle_matchmaking(self):
         while True:
-            print("handle_matchmaking")
             match = await self.q.get_match(self.room_capacity)
             if not match:
-                print("no match found")
                 await asyncio.sleep(1)
                 continue
             game_room = GameRoom(self.room_capacity, scoreboard=self.users_scoreboard)
@@ -66,14 +67,16 @@ class ConnectionManager:
                 )
             )
 
-    async def keep_connections_active(self):
+    async def keep_connections_active(self, song):
         while True:
-            await asyncio.sleep(5)
-            for uinfo in self.users.values():
-                try:
-                    await uinfo.ws.send_json({"hey, dear client": "please keep alive"})
-                except RuntimeError:
-                    print("Skip sending message to removed user")
+            for line in song:
+                await asyncio.sleep(2)
+                for uinfo in self.users.values():
+                    try:
+                        await uinfo.ws.send_json({">": line})
+                    except RuntimeError:
+                        uinfo.room.user_interactions.handle_disconnection(uinfo.ws)
+                        self.disconnect(player_name=uinfo.username)
 
     async def update_user_score(self):
         while True:
@@ -96,5 +99,5 @@ class ConnectionManager:
         will_ban_him = message.get("block", None)
         if not will_ban_him:
             return False
-        self.q.blacklist.ban(username=user, banned_username=will_ban_him)
+        self.q.blacklist.ban(user, will_ban_him)
         return True
