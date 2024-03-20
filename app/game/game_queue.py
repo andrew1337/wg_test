@@ -1,4 +1,5 @@
 import asyncio
+from random import randint
 
 from .blacklist import UsersBlacklist
 
@@ -34,6 +35,9 @@ class MatchmakingQueue:
         while len(match) < n:
             print(f"waiting for {n} players")
             item = await self.queue.get()
+            if randint(0, 2):
+                self.add(item)
+                continue
             if len(match) == 0:
                 match.append(item)
                 continue
