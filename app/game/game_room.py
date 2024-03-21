@@ -46,7 +46,7 @@ class GameRoom:
         self.capacity = capacity
         self.players_ready_to_restart = set()
         self.timer_class = Timer
-        self.timer_inintial_seconds = 10
+        self.timer_int_seconds = 10
         self.timer: Optional[Timer] = None
         self.game_class = Game
         self.game: Optional[Game] = None
@@ -70,7 +70,7 @@ class GameRoom:
         self.ws_player_mapping[ws] = player_name
         await self.notify_all({"ping": f"Player {player_name} joined the game."})
         if len(self.players) == self.capacity:
-            await self.start_game()
+            asyncio.create_task(self.start_game())
 
     async def start_game(self):
         if len(self.players) < 2:
@@ -88,7 +88,7 @@ class GameRoom:
             await self.do_restart()
 
     async def start_timer(self):
-        self.timer = self.timer_class(self.timer_inintial_seconds)
+        self.timer = self.timer_class(self.timer_int_seconds)
         async for remaining_time in self.timer.start():
             if self.game_is_ended.is_set():
                 break
@@ -130,12 +130,15 @@ class GameRoom:
                 if player in self.game.result.winners
                 else PlayerResult.LOSE.name
             )
-            await ws.send_json(
-                {
-                    "game_state": "result",
-                    "result": result,
-                }
-            )
+            try: 
+                await ws.send_json(
+                    {
+                        "game_state": "result",
+                        "result": result,
+                    }
+                )
+            except RuntimeError:
+                pass
         self.write_down_results()
 
     def write_down_results(self):

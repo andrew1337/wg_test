@@ -54,7 +54,6 @@ async def websocket_endpoint(websocket: WebSocket, player_name: str):
     try:
         while True:
             data = await websocket.receive_json()
-            print(f"handle_websocket {data=}", player_name, data)
             if data is None:
                 continue
             if mgr.handle_blacklist(player_name, data):

@@ -59,22 +59,17 @@ class ConnectionManager:
             if not match:
                 await asyncio.sleep(1)
                 continue
-            game_room = GameRoom(self.room_capacity, scoreboard=self.users_scoreboard)
-            try:
-                await asyncio.gather(
-                    *(
-                        self._add_user_to_room(player_name, game_room)
-                        for player_name in match
-                    )
-                )
-            except Exception as e:
-                print(e)
-                await asyncio.sleep(1)
+            game_room = GameRoom(
+                self.room_capacity, scoreboard=self.users_scoreboard
+            )
+            for player_name in match:
+                await self._add_user_to_room(player_name, game_room)
+ 
 
     async def keep_connections_active(self, song):
         while True:
             for line in song:
-                await asyncio.sleep(2)
+                await asyncio.sleep(0.5)
                 for uinfo in self.users.values():
                     try:
                         await uinfo.ws.send_json({">": line})
@@ -84,7 +79,7 @@ class ConnectionManager:
 
     async def update_user_score(self):
         while True:
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
             for name, info in self.users.items():
                 user_score: UserScore = self.users_scoreboard.get_or_none(name)
                 if not user_score:

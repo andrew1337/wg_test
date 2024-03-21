@@ -25,15 +25,12 @@ class MatchmakingQueue:
     def _is_blacklisted_by_somebody(self, match, user) -> bool:
         for i in match:
             if self.blacklist.is_banned(i, user):
-                print("pair of users is blacklisted", i, user)
                 return True
         return False
 
     async def get_match(self, n: int) -> list:
-        print("getting match")
         match = []
         while len(match) < n:
-            print(f"waiting for {n} players")
             item = await self.queue.get()
             if randint(0, 2):
                 await self.add(item)
@@ -43,7 +40,6 @@ class MatchmakingQueue:
                 continue
             if self._is_blacklisted_by_somebody(match, item):
                 await self.add(item)
-                await asyncio.sleep(0.1)
                 continue
             match.append(item)
         assert len(match) == n

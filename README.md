@@ -10,11 +10,6 @@ Run
 uvicorn main:app --reload --host 0.0.0.0
 ```
 
-Test
-```bash
-python -m unittest discover
-```
-
 Start using docker
 ```bash
 docker-compose up
